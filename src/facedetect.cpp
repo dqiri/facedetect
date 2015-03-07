@@ -9,22 +9,40 @@
 #include <cv.h>
 #include "opencv2/opencv.hpp"
 #include <list>
+#include "std_msgs/Int64.h"
 
+#include "stdlib.h"
+#include "time.h"
 #include <cmath>
 
 using namespace std;
 using namespace cv;
 
 /** Function Headers */
-void detectAndDisplay( Mat frame );
+void detectFace( Mat &frame );
+void powerLevel();
+/** TODO YEEEEEEEE **/
 
 /** Global variables */
-String face_cascade_name = "haarcascade_frontalface_alt.xml";
-String eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
+String face_cascade_name = "/home/viki/catkin_ws/src/facedetect/src/haarcascade_frontalface_alt.xml";
+String eyes_cascade_name = "/home/viki/catkin_ws/src/facedetect/src/haarcascade_eye_tree_eyeglasses.xml";
+String led_topic = "arduserial";
+ros::Publisher led_pub;
 CascadeClassifier face_cascade;
 CascadeClassifier eyes_cascade;
 string window_name = "Capture - Face detection";
 RNG rng(12345);
+
+void powerLevel() {
+    std_msgs::Int64 msg;
+
+    int64 plvl = (int64) (rand() % 16 + 1);
+    ROS_INFO("Powerlevel: %d", (int) plvl);
+    msg.data = plvl;
+    led_pub.publish(msg);
+    ros::Duration(6).sleep();
+
+}
 
 //TODO detectFaces(Mat& in, Mat& out);
 //TODO will this work? 
@@ -39,9 +57,11 @@ void detectFace( Mat &frame )
 
     //-- Detect faces
     face_cascade.detectMultiScale( frame_gray, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30) );
+    int facesinhere = 0;
 
     for( size_t i = 0; i < faces.size(); i++ )
     {
+        powerLevel();
         Point center( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height*0.5 );
         ellipse( frame, center, Size( faces[i].width*0.5, faces[i].height*0.5), 0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
 
@@ -68,13 +88,13 @@ void imageCallback(const sensor_msgs::ImageConstPtr& source)
     static cv_bridge::CvImagePtr prev = cv_bridge::toCvCopy(source, sensor_msgs::image_encodings::MONO8);
     cv_bridge::CvImagePtr out = cv_bridge::toCvCopy(source, sensor_msgs::image_encodings::RGB8);
 
-    detectFaces(out->image);
+    detectFace(out->image);
 
     chatter_pub.publish(out->toImageMsg());
 }
 
 /** @function main */
-int main( int argc, const char** argv )
+int main( int argc, char** argv )
 {
     CvCapture* capture;
     Mat frame;
@@ -91,8 +111,12 @@ int main( int argc, const char** argv )
     image_transport::ImageTransport it(n);
     image_transport::Subscriber sub;
 
-    sub = it.subscribe("/camera/visibile/image", 1, imageCallback);
+    sub = it.subscribe("/camera/visible/image", 1, imageCallback);
     chatter_pub = it.advertise("chatter", 1);
+    
+    srand(time(0));
+    led_pub = n.advertise<std_msgs::Int64>(led_topic, 1);
+    
     ROS_INFO("facedetect running");
     //fl = n.advertise<sensor_msgs::Image>("removethis", 1);
     ros::spin();

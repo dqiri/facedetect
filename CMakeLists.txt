@@ -6,11 +6,16 @@ project(facedetect)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  rospy
   std_msgs
+  message_generation
+  cv_bridge
+  image_transport
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
+find_package(OpenCV REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -160,3 +165,12 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(facedetect src/facedetect.cpp)
+target_link_libraries(facedetect
+    ${catkin_LIBRARIES}
+)
+target_link_libraries(facedetect
+    ${OPENCV_LIBS}
+)
+add_dependencies(facedetect facedetect_gencpp)
